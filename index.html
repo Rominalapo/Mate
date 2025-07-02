@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Método Simplex</title>
+</head>
+<body>
+  <h2>Resolución Simplex (Z = 3x + 5y)</h2>
+  <pre id="resultado"></pre>
+
+  <script>
+    function simplex() {
+      // Tabla inicial del problema
+      let tabla = [
+        [2, 1, 1, 0, 0, 8],  // 2x + 1y + s1 = 8
+        [1, 2, 0, 1, 0, 6],  // 1x + 2y + s2 = 6
+        [-3, -5, 0, 0, 1, 0] // Z = 3x + 5y -> -Z + 3x + 5y = 0
+      ];
+
+      const filas = tabla.length;
+      const columnas = tabla[0].length;
+
+      function pivot(filaP, colP) {
+        const pivote = tabla[filaP][colP];
+        for (let j = 0; j < columnas; j++) {
+          tabla[filaP][j] /= pivote;
+        }
+
+        for (let i = 0; i < filas; i++) {
+          if (i !== filaP) {
+            const factor = tabla[i][colP];
+            for (let j = 0; j < columnas; j++) {
+              tabla[i][j] -= factor * tabla[filaP][j];
+            }
+          }
+        }
+      }
+
+      // Método Simplex
+      while (true) {
+        let colP = tabla[filas - 1].slice(0, columnas - 1).findIndex(v => v < 0);
+        if (colP === -1) break;
+
+        let filaP = -1, minRatio = Infinity;
+        for (let i = 0; i < filas - 1; i++) {
+          if (tabla[i][colP] > 0) {
+            let ratio = tabla[i][columnas - 1] / tabla[i][colP];
+            if (ratio < minRatio) {
+              minRatio = ratio;
+              filaP = i;
+            }
+          }
+        }
+
+        if (filaP === -1) {
+          document.getElementById("resultado").innerText = "Solución ilimitada.";
+          return;
+        }
+
+        pivot(filaP, colP);
+      }
+
+      let x = 0, y = 0;
+      if (tabla[0][0] === 1 && tabla[1][0] === 0) x = tabla[0][columnas - 1];
+      else if (tabla[1][0] === 1 && tabla[0][0] === 0) x = tabla[1][columnas - 1];
+
+      if (tabla[0][1] === 1 && tabla[1][1] === 0) y = tabla[0][columnas - 1];
+      else if (tabla[1][1] === 1 && tabla[0][1] === 0) y = tabla[1][columnas - 1];
+
+      let z = tabla[filas - 1][columnas - 1];
+
+      document.getElementById("resultado").innerText =
+        `x = ${x.toFixed(2)}\ny = ${y.toFixed(2)}\nZ = ${z.toFixed(2)}`;
+    }
+
+    simplex();
+  </script>
+</body>
+</html>

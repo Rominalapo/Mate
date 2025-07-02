@@ -1,49 +1,108 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <title>Método Simplex</title>
+  <meta charset="UTF-8">
+  <title>Método Simplex Interactivo</title>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #f4f4f4; }
+    input { width: 60px; margin: 5px; }
+    table, th, td { border: 1px solid #000; border-collapse: collapse; padding: 5px; text-align: center; }
+    .step { margin-top: 20px; background: #fff; padding: 10px; border: 1px solid #ccc; }
+  </style>
 </head>
 <body>
-  <h2>Resolución Simplex (Z = 3x + 5y)</h2>
-  <pre id="resultado"></pre>
+  <h2>Método Simplex Interactivo</h2>
+  
+  <label>Tipo de problema:</label>
+  <select id="tipo">
+    <option value="max">Maximizar</option>
+    <option value="min">Minimizar</option>
+  </select><br><br>
+
+  <label>Función objetivo (Z = c1·x + c2·y):</label><br>
+  c1: <input type="number" id="c1" value="3">
+  c2: <input type="number" id="c2" value="5"><br><br>
+
+  <label>Restricción 1 (a1·x + b1·y ≤ d1):</label><br>
+  a1: <input type="number" id="a1" value="2">
+  b1: <input type="number" id="b1" value="1">
+  d1: <input type="number" id="d1" value="8"><br><br>
+
+  <label>Restricción 2 (a2·x + b2·y ≤ d2):</label><br>
+  a2: <input type="number" id="a2" value="1">
+  b2: <input type="number" id="b2" value="2">
+  d2: <input type="number" id="d2" value="6"><br><br>
+
+  <button onclick="resolverSimplex()">Resolver</button>
+
+  <div id="resultado"></div>
 
   <script>
-    function simplex() {
-      // Tabla inicial del problema
+    function resolverSimplex() {
+      const tipo = document.getElementById("tipo").value;
+      const c1 = parseFloat(document.getElementById("c1").value);
+      const c2 = parseFloat(document.getElementById("c2").value);
+
+      const a1 = parseFloat(document.getElementById("a1").value);
+      const b1 = parseFloat(document.getElementById("b1").value);
+      const d1 = parseFloat(document.getElementById("d1").value);
+
+      const a2 = parseFloat(document.getElementById("a2").value);
+      const b2 = parseFloat(document.getElementById("b2").value);
+      const d2 = parseFloat(document.getElementById("d2").value);
+
+      // Armar la tabla inicial (forma estándar)
       let tabla = [
-        [2, 1, 1, 0, 0, 8],  // 2x + 1y + s1 = 8
-        [1, 2, 0, 1, 0, 6],  // 1x + 2y + s2 = 6
-        [-3, -5, 0, 0, 1, 0] // Z = 3x + 5y -> -Z + 3x + 5y = 0
+        [a1, b1, 1, 0, 0, d1],
+        [a2, b2, 0, 1, 0, d2],
+        [tipo === "max" ? -c1 : c1, tipo === "max" ? -c2 : c2, 0, 0, 1, 0]
       ];
 
+      const pasos = [];
       const filas = tabla.length;
-      const columnas = tabla[0].length;
+      const cols = tabla[0].length;
 
-      function pivot(filaP, colP) {
-        const pivote = tabla[filaP][colP];
-        for (let j = 0; j < columnas; j++) {
-          tabla[filaP][j] /= pivote;
+      function guardarPaso(tabla, texto) {
+        let html = `<div class='step'><b>${texto}</b><br><table>`;
+        for (let fila of tabla) {
+          html += "<tr>";
+          for (let val of fila) {
+            html += `<td>${val.toFixed(2)}</td>`;
+          }
+          html += "</tr>";
         }
+        html += "</table></div>";
+        pasos.push(html);
+      }
 
+      function pivotear(filaPivote, colPivote) {
+        const pivote = tabla[filaPivote][colPivote];
+        for (let j = 0; j < cols; j++) {
+          tabla[filaPivote][j] /= pivote;
+        }
         for (let i = 0; i < filas; i++) {
-          if (i !== filaP) {
-            const factor = tabla[i][colP];
-            for (let j = 0; j < columnas; j++) {
-              tabla[i][j] -= factor * tabla[filaP][j];
+          if (i !== filaPivote) {
+            const factor = tabla[i][colPivote];
+            for (let j = 0; j < cols; j++) {
+              tabla[i][j] -= factor * tabla[filaPivote][j];
             }
           }
         }
       }
 
-      // Método Simplex
+      let iter = 1;
       while (true) {
-        let colP = tabla[filas - 1].slice(0, columnas - 1).findIndex(v => v < 0);
+        guardarPaso(JSON.parse(JSON.stringify(tabla)), `Iteración ${iter}`);
+
+        const obj = tabla[filas - 1].slice(0, cols - 1);
+        let colP = obj.findIndex(v => tipo === "max" ? v < 0 : v > 0);
+
         if (colP === -1) break;
 
         let filaP = -1, minRatio = Infinity;
         for (let i = 0; i < filas - 1; i++) {
           if (tabla[i][colP] > 0) {
-            let ratio = tabla[i][columnas - 1] / tabla[i][colP];
+            let ratio = tabla[i][cols - 1] / tabla[i][colP];
             if (ratio < minRatio) {
               minRatio = ratio;
               filaP = i;
@@ -52,27 +111,25 @@
         }
 
         if (filaP === -1) {
-          document.getElementById("resultado").innerText = "Solución ilimitada.";
-          return;
+          pasos.push("<div class='step'><b>Solución ilimitada</b></div>");
+          break;
         }
 
-        pivot(filaP, colP);
+        pivotear(filaP, colP);
+        iter++;
       }
 
-      let x = 0, y = 0;
-      if (tabla[0][0] === 1 && tabla[1][0] === 0) x = tabla[0][columnas - 1];
-      else if (tabla[1][0] === 1 && tabla[0][0] === 0) x = tabla[1][columnas - 1];
+      // Mostrar solución final
+      let x = 0, y = 0, z = tabla[filas - 1][cols - 1];
+      if (tabla[0][0] === 1 && tabla[1][0] === 0) x = tabla[0][cols - 1];
+      else if (tabla[1][0] === 1 && tabla[0][0] === 0) x = tabla[1][cols - 1];
 
-      if (tabla[0][1] === 1 && tabla[1][1] === 0) y = tabla[0][columnas - 1];
-      else if (tabla[1][1] === 1 && tabla[0][1] === 0) y = tabla[1][columnas - 1];
+      if (tabla[0][1] === 1 && tabla[1][1] === 0) y = tabla[0][cols - 1];
+      else if (tabla[1][1] === 1 && tabla[0][1] === 0) y = tabla[1][cols - 1];
 
-      let z = tabla[filas - 1][columnas - 1];
-
-      document.getElementById("resultado").innerText =
-        `x = ${x.toFixed(2)}\ny = ${y.toFixed(2)}\nZ = ${z.toFixed(2)}`;
+      pasos.push(`<div class='step'><b>Solución óptima:</b><br>x = ${x.toFixed(2)}, y = ${y.toFixed(2)}<br>${tipo === "max" ? "Z máx" : "Z mín"} = ${z.toFixed(2)}</div>`);
+      document.getElementById("resultado").innerHTML = pasos.join("");
     }
-
-    simplex();
   </script>
 </body>
 </html>
